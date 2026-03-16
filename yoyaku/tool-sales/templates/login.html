@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>ログイン - 予約ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --border: #2a2a4a;
+      --accent: #4f8ef7;
+      --danger: #e74c3c;
+      --text: #e0e0f0;
+      --muted: #8888aa;
+      --radius: 12px;
+    }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .wrap {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-align: center;
+    }
+    .logo span { color: var(--accent); }
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: -16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* PIN入力: 数字ボタン式 */
+    .pin-display {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .pin-dot.filled {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .pin-dot.error {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .numpad button {
+      background: #1e1e38;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 600;
+      padding: 16px 0;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .numpad button:active { background: var(--accent); transform: scale(0.94); }
+    .numpad button.del {
+      font-size: 18px;
+      color: var(--muted);
+    }
+    .numpad button.empty { visibility: hidden; pointer-events: none; }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    #err-msg {
+      font-size: 13px;
+      color: var(--danger);
+      text-align: center;
+      min-height: 18px;
+    }
+
+    /* テキスト入力モード（PIN桁数が多い場合の代替） */
+    .text-pin-wrap {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .text-pin-wrap input {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 20px;
+      letter-spacing: 0.2em;
+      text-align: center;
+      padding: 12px;
+      outline: none;
+    }
+    .text-pin-wrap input:focus { border-color: var(--accent); }
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      border-radius: var(--radius);
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-login:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="logo">🏟 <span>予約ツール</span></div>
+    <div class="subtitle">札幌市体育館 自動予約システム</div>
+  </div>
+
+  <div class="card">
+    <!-- PINドット表示 -->
+    <div class="pin-display" id="pin-display"></div>
+
+    <!-- エラーメッセージ -->
+    <div id="err-msg"></div>
+
+    <!-- 数字パッド -->
+    <div class="numpad" id="numpad">
+      <button onclick="numInput('1')">1</button>
+      <button onclick="numInput('2')">2</button>
+      <button onclick="numInput('3')">3</button>
+      <button onclick="numInput('4')">4</button>
+      <button onclick="numInput('5')">5</button>
+      <button onclick="numInput('6')">6</button>
+      <button onclick="numInput('7')">7</button>
+      <button onclick="numInput('8')">8</button>
+      <button onclick="numInput('9')">9</button>
+      <button class="empty"></button>
+      <button onclick="numInput('0')">0</button>
+      <button class="del" onclick="numDel()">⌫</button>
+    </div>
+
+    <!-- テキスト入力（フォールバック） -->
+    <div class="text-pin-wrap" id="text-mode">
+      <input type="password" id="text-pin" placeholder="PIN" inputmode="numeric" pattern="[0-9]*">
+      <button class="btn-login" onclick="submitTextPin()">ログイン</button>
+    </div>
+
+    <div class="hint" id="hint">PINを入力してください</div>
+  </div>
+</div>
+
+<script>
+  const PIN_LENGTH = 4;  // set_pin.py と合わせる（4〜8桁推奨）
+  let pin = "";
+  let submitting = false;
+
+  // --- ドット描画 ---
+  function renderDots(errorMode = false) {
+    const wrap = document.getElementById("pin-display");
+    wrap.innerHTML = "";
+    for (let i = 0; i < PIN_LENGTH; i++) {
+      const d = document.createElement("div");
+      d.className = "pin-dot" + (i < pin.length ? (errorMode ? " error" : " filled") : "");
+      wrap.appendChild(d);
+    }
+  }
+  renderDots();
+
+  // --- 数字入力 ---
+  function numInput(n) {
+    if (submitting) return;
+    if (pin.length >= PIN_LENGTH) return;
+    pin += n;
+    renderDots();
+    clearErr();
+    if (pin.length === PIN_LENGTH) {
+      setTimeout(submit, 120);
+    }
+  }
+
+  function numDel() {
+    if (submitting) return;
+    pin = pin.slice(0, -1);
+    renderDots();
+    clearErr();
+  }
+
+  // --- キーボード対応 ---
+  document.addEventListener("keydown", e => {
+    if (e.key >= "0" && e.key <= "9") numInput(e.key);
+    else if (e.key === "Backspace") numDel();
+    else if (e.key === "Enter" && pin.length === PIN_LENGTH) submit();
+  });
+
+  // --- 送信 ---
+  async function submit() {
+    if (submitting || pin.length < PIN_LENGTH) return;
+    submitting = true;
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        window.location.href = "/";
+      } else {
+        showErr("PINが違います");
+        shakeReset();
+      }
+    } catch(e) {
+      showErr("通信エラー");
+      shakeReset();
+    }
+  }
+
+  function shakeReset() {
+    renderDots(true);
+    setTimeout(() => {
+      pin = "";
+      renderDots();
+      submitting = false;
+    }, 600);
+  }
+
+  function showErr(msg) {
+    document.getElementById("err-msg").textContent = msg;
+  }
+  function clearErr() {
+    document.getElementById("err-msg").textContent = "";
+  }
+
+  // テキスト入力モード
+  async function submitTextPin() {
+    pin = document.getElementById("text-pin").value;
+    await submit();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="札幌市の体育館予約を24時間自動監視。空きが出た瞬間に自動予約するツール。スマホからも操作可能。">
+  <meta property="og:title" content="札幌市体育館予約｜自動予約ツール">
+  <meta property="og:description" content="体育館の空き、自動で取ります。24時間監視・瞬間予約・スマホ対応">
+  <meta property="og:type" content="website">
+  <title>札幌市体育館予約｜自動予約ツール</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #05050f;
+      --bg2: #0d0d1f;
+      --card: #111128;
+      --border: #1e1e3a;
+      --accent: #4f8ef7;
+      --accent2: #7c4dff;
+      --success: #00e676;
+      --warn: #ffb300;
+      --text: #e8e8f8;
+      --muted: #7070a0;
+      --radius: 16px;
+      --max: 960px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ===== ユーティリティ ===== */
+    .container { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(79,142,247,.15);
+      color: var(--accent);
+      border: 1px solid rgba(79,142,247,.3);
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: clamp(24px, 5vw, 36px);
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+    .section-sub {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 15px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ===== ナビ ===== */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(5,5,15,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      max-width: var(--max);
+      margin: 0 auto;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .btn-nav {
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn-nav:hover { opacity: .85; }
+
+    /* ===== HERO ===== */
+    .hero {
+      padding: 80px 20px 70px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 70% 50% at 50% -10%, rgba(79,142,247,.18) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(124,77,255,.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-size: 13px;
+      color: var(--success);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .hero-eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: blink 1.8s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .hero h1 {
+      font-size: clamp(32px, 8vw, 60px);
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero-sub {
+      font-size: clamp(15px, 3vw, 18px);
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 36px;
+    }
+    .hero-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 17px;
+      font-weight: 800;
+      padding: 16px 36px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 4px 30px rgba(79,142,247,.35);
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-2px); }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      padding: 15px 28px;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color .2s;
+    }
+    .btn-outline:hover { border-color: var(--accent); }
+
+    .hero-note {
+      margin-top: 18px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ===== 数字バー ===== */
+    .stats {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 20px;
+    }
+    .stats-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 24px;
+      text-align: center;
+    }
+    .stat-num {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--accent);
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ===== PROBLEM ===== */
+    .section { padding: 80px 20px; }
+    .section.alt { background: var(--bg2); }
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 40px;
+    }
+    .problem-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .problem-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .problem-text strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .problem-text p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ===== HOW IT WORKS ===== */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 48px;
+      position: relative;
+    }
+    .steps::before {
+      content: "";
+      position: absolute;
+      left: 23px;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent2));
+      opacity: .3;
+    }
+    .step {
+      display: flex;
+      gap: 20px;
+      padding-bottom: 36px;
+      position: relative;
+    }
+    .step-num {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .step-body strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      padding-top: 10px;
+    }
+    .step-body p { font-size: 14px; color: var(--muted); }
+
+    /* ===== FEATURES ===== */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feature-card:hover {
+      border-color: rgba(79,142,247,.4);
+      transform: translateY(-3px);
+    }
+    .feature-icon { font-size: 32px; margin-bottom: 14px; }
+    .feature-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .feature-desc { font-size: 14px; color: var(--muted); }
+
+    /* ===== PRICING ===== */
+    .pricing-wrap {
+      max-width: 440px;
+      margin: 48px auto 0;
+    }
+    .pricing-card {
+      background: var(--card);
+      border: 2px solid var(--accent);
+      border-radius: 24px;
+      padding: 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .pricing-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(79,142,247,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .pricing-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 4px 14px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+    }
+    .pricing-price {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .pricing-price small {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+    .pricing-per {
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 4px;
+      margin-bottom: 28px;
+    }
+    .pricing-features {
+      list-style: none;
+      text-align: left;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pricing-features li {
+      display: flex;
+      gap: 10px;
+      font-size: 14px;
+      align-items: flex-start;
+    }
+    .pricing-features li::before {
+      content: "✓";
+      color: var(--success);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .btn-buy {
+      display: block;
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 18px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 6px 30px rgba(79,142,247,.4);
+    }
+    .btn-buy:hover { opacity: .9; transform: translateY(-2px); }
+    .pricing-note {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ===== FAQ ===== */
+    .faq-list {
+      max-width: 680px;
+      margin: 40px auto 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    details {
+      border-bottom: 1px solid var(--border);
+    }
+    details:first-of-type { border-top: 1px solid var(--border); }
+    summary {
+      padding: 20px 4px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+";
+      font-size: 20px;
+      font-weight: 300;
+      color: var(--muted);
+      flex-shrink: 0;
+      transition: transform .2s;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    .faq-body {
+      padding: 0 4px 20px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    /* ===== CTA ===== */
+    .cta-section {
+      padding: 80px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+    }
+    .cta-section h2 {
+      font-size: clamp(26px, 6vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+    }
+    .cta-section p {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 32px;
+    }
+
+    /* ===== フッター ===== */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--accent); }
+
+    /* ===== システム図解 ===== */
+    .system-diagram {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+      margin: 48px auto 0;
+      max-width: 720px;
+    }
+    .sys-node {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      text-align: center;
+      min-width: 150px;
+      flex-shrink: 0;
+    }
+    .sys-node .sys-icon { font-size: 36px; margin-bottom: 8px; }
+    .sys-node .sys-label { font-size: 14px; font-weight: 700; }
+    .sys-node .sys-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .sys-node.highlight {
+      border-color: var(--accent);
+      background: rgba(79,142,247,.08);
+    }
+    .sys-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      gap: 4px;
+    }
+    .sys-arrow .arr { font-size: 20px; color: var(--accent); }
+    .sys-desc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 32px;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .sys-desc-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .sys-desc-card span { font-size: 20px; flex-shrink: 0; }
+
+    /* ===== 購入後フロー ===== */
+    .flow-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 48px;
+      counter-reset: flow;
+    }
+    .flow-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      position: relative;
+    }
+    .flow-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .flow-icon { font-size: 24px; margin-bottom: 8px; display: block; }
+    .flow-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .flow-desc { font-size: 13px; color: var(--muted); line-height: 1.7; }
+    .flow-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-top: 8px;
+    }
+    .flow-badge.auto { background: rgba(0,230,118,.15); color: var(--success); }
+    .flow-badge.manual { background: rgba(79,142,247,.15); color: var(--accent); }
+
+    /* ===== レスポンシブ ===== */
+    @media (min-width: 640px) {
+      .nav-link { display: block !important; }
+    }
+    @media (max-width: 600px) {
+      .hero { padding: 60px 20px 50px; }
+      .section { padding: 60px 20px; }
+      .btn-primary { font-size: 15px; padding: 14px 28px; }
+      .sys-arrow .arr { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ナビ -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">🏟 <span>札幌市体育館予約</span></div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <a href="#system" style="color:var(--muted);text-decoration:none;font-size:14px;display:none" class="nav-link">仕組み</a>
+      <a href="#flow"   style="color:var(--muted);text-decoration:none;font-size:14px;display:none" class="nav-link">購入の流れ</a>
+      <a href="#pricing" class="btn-nav">今すぐ購入</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ヒーロー -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">24時間 自動監視 稼働中</div>
+    <h1>体育館の空き、<br><span class="gradient-text">自動で取ります。</span></h1>
+    <p class="hero-sub">
+      札幌市の体育館予約システムを常時監視。空きが出た瞬間に自動で予約を完了するツールです。もう張り付いて更新し続ける必要はありません。
+    </p>
+    <div class="hero-btns">
+      <a href="#pricing" class="btn-primary">🚀 月額980円で始める</a>
+      <a href="#how" class="btn-outline">仕組みを見る</a>
+    </div>
+    <p class="hero-note">月額サブスクリプション・いつでも解約可能</p>
+  </div>
+</section>
+
+<!-- 数字バー -->
+<div class="stats">
+  <div class="stats-inner">
+    <div>
+      <div class="stat-num">24/7</div>
+      <div class="stat-label">自動監視</div>
+    </div>
+    <div>
+      <div class="stat-num">1秒</div>
+      <div class="stat-label">監視間隔（最短）</div>
+    </div>
+    <div>
+      <div class="stat-num">全館</div>
+      <div class="stat-label">札幌市体育館に対応</div>
+    </div>
+    <div>
+      <div class="stat-num">スマホ</div>
+      <div class="stat-label">から操作・確認可能</div>
+    </div>
+  </div>
+</div>
+
+<!-- 悩み -->
+<section class="section">
+  <div class="container" style="text-align:center">
+    <div class="tag">こんな悩みありませんか？</div>
+    <h2 class="section-title">体育館予約、<br>こんなことで困っていませんか</h2>
+  </div>
+  <div class="container">
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="problem-icon">😫</div>
+        <div class="problem-text">
+          <strong>空きが出たのに気づかず取れない</strong>
+          <p>ページを見ていない間に空きが出て、すぐ埋まってしまう。</p>
+        </div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">⏰</div>
+        <div class="problem-text">
+          <strong>更新し続けるのが大変</strong>
+          <p>仕事中や夜中にも更新を続けるのは現実的に無理。</p>
+        </div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🏃</div>
+        <div class="problem-text">
+          <strong>予約まで手順が多すぎる</strong>
+          <p>空きを見つけてから予約完了まで何ステップもあり、その間に取られてしまう。</p>
+        </div>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">📍</div>
+        <div class="problem-text">
+          <strong>人気施設は競争が激しい</strong>
+          <p>空きが出ても他のユーザーがすぐ予約してしまう。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 仕組み -->
+<section class="section alt" id="how">
+  <div class="container" style="text-align:center">
+    <div class="tag">How it works</div>
+    <h2 class="section-title">設定するだけで<br>あとは全自動</h2>
+    <p class="section-sub">3ステップで自動予約が動き出します</p>
+  </div>
+  <div class="container" style="max-width:560px">
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>ツールを起動する</strong>
+          <p>PCで start.bat をダブルクリック。ブラウザが自動で開きます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>予約日・ログイン情報を入力する</strong>
+          <p>予約したい日付、施設利用者登録のID/パスワードを設定。スマホからも入力できます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>「開始」を押すだけ</strong>
+          <p>あとは自動で監視・予約。予約が完了するとDiscordに通知が届きます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- システム構成 -->
+<section class="section" id="system">
+  <div class="container" style="text-align:center">
+    <div class="tag">System</div>
+    <h2 class="section-title">どういう仕組みですか？</h2>
+    <p class="section-sub">クラウドは不要。すべてあなたのPCで完結します。</p>
+  </div>
+  <div class="container">
+
+    <!-- 図解 -->
+    <div class="system-diagram">
+      <div class="sys-node">
+        <div class="sys-icon">📱</div>
+        <div class="sys-label">スマホ</div>
+        <div class="sys-sub">操作・確認</div>
+      </div>
+      <div class="sys-arrow">
+        <div class="arr">⇄</div>
+        <div>Wi-Fi</div>
+      </div>
+      <div class="sys-node highlight">
+        <div class="sys-icon">💻</div>
+        <div class="sys-label">あなたのPC</div>
+        <div class="sys-sub">ツール本体が動く</div>
+      </div>
+      <div class="sys-arrow">
+        <div class="arr">⇄</div>
+        <div>HTTPS</div>
+      </div>
+      <div class="sys-node">
+        <div class="sys-icon">🏟</div>
+        <div class="sys-label">札幌市予約サイト</div>
+        <div class="sys-sub">自動監視・予約</div>
+      </div>
+    </div>
+
+    <!-- 補足説明 -->
+    <div class="sys-desc-grid">
+      <div class="sys-desc-card">
+        <span>🖥</span>
+        <div>PC上のChromeブラウザが札幌市の予約サイトを自動で操作します。クラウドサーバーは不要で、すべてあなたのPC内で完結します。</div>
+      </div>
+      <div class="sys-desc-card">
+        <span>📱</span>
+        <div>スマホは同じWi-Fi内のPCに接続してUIを表示するだけ。スマホで予約処理をしているわけではありません。</div>
+      </div>
+      <div class="sys-desc-card">
+        <span>🔒</span>
+        <div>ログインIDやパスワードはあなたのPC内にのみ保存されます。外部サーバーには一切送信されません。</div>
+      </div>
+      <div class="sys-desc-card">
+        <span>⚙️</span>
+        <div>予約完了後はChromeが自動で閉じ、監視を停止します。次に使うときはまた「開始」を押すだけです。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 機能 -->
+<section class="section" id="features">
+  <div class="container" style="text-align:center">
+    <div class="tag">Features</div>
+    <h2 class="section-title">主な機能</h2>
+  </div>
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-title">常時自動監視</div>
+        <div class="feature-desc">最短1秒間隔で施設の空き状況を監視。空きが出た瞬間に予約処理を開始します。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">瞬間予約</div>
+        <div class="feature-desc">空き検出から予約完了まで全自動。時間帯・利用目的・人数の入力もすべて自動。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">スマホから操作</div>
+        <div class="feature-desc">同じWi-Fi内のスマホからブラウザで操作・ログ確認が可能。外出中も状況を把握できます。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏫</div>
+        <div class="feature-title">複数施設に対応</div>
+        <div class="feature-desc">空きがある施設を上から順に試し、取れなければ次の施設へ。全施設を自動で巡回します。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">半面/全面の優先選択</div>
+        <div class="feature-desc">半面A → 半面B → 全面の優先順で自動選択。希望に合った枠を確実に取ります。</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <div class="feature-title">Discord通知</div>
+        <div class="feature-desc">予約が完了した瞬間にDiscordへ通知。施設名・日時をすぐに確認できます。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 料金 -->
+<section class="section alt" id="pricing">
+  <div class="container" style="text-align:center">
+    <div class="tag">Pricing</div>
+    <h2 class="section-title">シンプルな料金体系</h2>
+    <p class="section-sub">いつでも解約可能。解約後はすぐに停止します。</p>
+  </div>
+  <div class="container">
+    <div class="pricing-wrap">
+      <div class="pricing-card">
+        <div class="pricing-badge">月額プラン</div>
+        <div class="pricing-price"><small>¥</small>980<small>/月</small></div>
+        <div class="pricing-per">税込・月払い・いつでも解約可</div>
+        <ul class="pricing-features">
+          <li>24時間自動監視・自動予約</li>
+          <li>スマホ対応Webインターフェース</li>
+          <li>複数施設の自動巡回</li>
+          <li>Discord予約完了通知</li>
+          <li>半面/全面の優先選択</li>
+          <li>設定の自動保存</li>
+          <li>アップデートの提供</li>
+        </ul>
+        <!-- ★ 購入URLをここに設定 -->
+        <a href="https://booth.pm/YOUR_PRODUCT_URL" class="btn-buy" target="_blank" rel="noopener">
+          🛒 今すぐ購入する（BOOTH）
+        </a>
+        <p class="pricing-note">
+          ご購入後、設定方法とPINをDMでお送りします。<br>
+          対応OS: Windows 10/11（Chrome必須）
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 購入後のフロー -->
+<section class="section" id="flow">
+  <div class="container" style="text-align:center">
+    <div class="tag">購入後の流れ</div>
+    <h2 class="section-title">購入から予約完了まで</h2>
+    <p class="section-sub">購入当日から使えます。難しい操作は一切ありません。</p>
+  </div>
+  <div class="container">
+    <div class="flow-steps">
+
+      <div class="flow-card">
+        <div class="flow-num">1</div>
+        <span class="flow-icon">🛒</span>
+        <div class="flow-title">BOOTHで購入する</div>
+        <div class="flow-desc">月額980円のサブスクリプションプランを選択して購入。クレジットカード・PayPay・コンビニ払いに対応しています。</div>
+        <span class="flow-badge manual">あなたが操作</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">2</div>
+        <span class="flow-icon">📩</span>
+        <div class="flow-title">ツールが届く</div>
+        <div class="flow-desc">購入後24時間以内にBOOTHのDMでツール一式（ZIPファイル）とアクセスPINをお送りします。</div>
+        <span class="flow-badge manual">出品者から送付</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">3</div>
+        <span class="flow-icon">📦</span>
+        <div class="flow-title">ZIPを解凍する</div>
+        <div class="flow-desc">受け取ったZIPを任意のフォルダに解凍します。フォルダの中に start.bat が入っています。</div>
+        <span class="flow-badge manual">あなたが操作</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">4</div>
+        <span class="flow-icon">▶️</span>
+        <div class="flow-title">start.bat を起動する</div>
+        <div class="flow-desc">start.bat をダブルクリックするだけ。Pythonや必要なライブラリの確認・インストールも自動で行われます（初回のみ数分かかります）。</div>
+        <span class="flow-badge auto">ほぼ自動</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">5</div>
+        <span class="flow-icon">🔐</span>
+        <div class="flow-title">PINでログインする</div>
+        <div class="flow-desc">ブラウザが自動で開き、PINログイン画面が表示されます。DMで受け取ったPINを入力してログイン。スマホからも同じURLでアクセスできます。</div>
+        <span class="flow-badge manual">あなたが操作</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">6</div>
+        <span class="flow-icon">⚙️</span>
+        <div class="flow-title">設定を入力して開始</div>
+        <div class="flow-desc">予約したい日付・施設利用者ID・パスワード・利用目的・人数を入力して「開始」を押します。設定は次回から自動で読み込まれます。</div>
+        <span class="flow-badge manual">あなたが操作</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">7</div>
+        <span class="flow-icon">🤖</span>
+        <div class="flow-title">自動で監視・予約</div>
+        <div class="flow-desc">あとはツールがすべて自動で行います。空きが出た瞬間にChromeが起動して予約を完了します。</div>
+        <span class="flow-badge auto">完全自動</span>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-num">8</div>
+        <span class="flow-icon">✅</span>
+        <div class="flow-title">Discordに通知が届く</div>
+        <div class="flow-desc">予約が完了するとDiscordに「予約完了」通知が届きます。施設名・日時・URLが通知されます。</div>
+        <span class="flow-badge auto">自動通知</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="container" style="text-align:center">
+    <div class="tag">FAQ</div>
+    <h2 class="section-title">よくある質問</h2>
+  </div>
+  <div class="container">
+    <div class="faq-list">
+      <details>
+        <summary>どの施設に対応していますか？</summary>
+        <div class="faq-body">
+          札幌市の施設予約システム（harp.lg.jp/sapporo）に登録されている体育館に対応しています。バレーボール・バスケットボール・バドミントン等の施設予約に利用できます。
+        </div>
+      </details>
+      <details>
+        <summary>PCは常に起動している必要がありますか？</summary>
+        <div class="faq-body">
+          はい、ツールが動作している間はPCを起動しておく必要があります。スリープを無効にしてご利用ください。PCを閉じると監視が停止します。
+        </div>
+      </details>
+      <details>
+        <summary>スマホだけで使えますか？</summary>
+        <div class="faq-body">
+          予約処理はPC上のChromeで行われるため、PCが必要です。ただし、監視の開始・停止・ログ確認はスマホのブラウザから操作できます（同一Wi-Fi環境内）。
+        </div>
+      </details>
+      <details>
+        <summary>必要な環境を教えてください</summary>
+        <div class="faq-body">
+          Windows 10 / 11（64bit）、Python 3.10以上、Google Chrome 最新版が必要です。セットアップ手順は購入後に詳しくご案内します。
+        </div>
+      </details>
+      <details>
+        <summary>必ず予約が取れますか？</summary>
+        <div class="faq-body">
+          空きが出た瞬間に自動で予約を試みますが、同時に複数のユーザーが競合した場合や、システム側の混雑により失敗することがあります。その場合は監視を継続し、次の空き枠が出た際に再度チャレンジします。
+        </div>
+      </details>
+      <details>
+        <summary>解約方法を教えてください</summary>
+        <div class="faq-body">
+          BOOTH の購入画面からいつでもサブスクリプションを解約できます。解約後は更新日以降のご利用ができなくなります。
+        </div>
+      </details>
+      <details>
+        <summary>利用規約・禁止事項はありますか？</summary>
+        <div class="faq-body">
+          個人利用のみ許可しています。第三者への転売・共有・再配布は禁止です。施設予約システムの利用規約に従ってご利用ください。
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 最終CTA -->
+<section class="cta-section">
+  <div class="container">
+    <h2>今日から、<span class="gradient-text">自動で予約。</span></h2>
+    <p>面倒な張り付き作業から解放されましょう。</p>
+    <a href="#pricing" class="btn-primary" style="font-size:17px; padding:16px 40px; display:inline-flex;">
+      🚀 月額980円で始める
+    </a>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer>
+  <p style="margin-bottom:8px">
+    <a href="#">利用規約</a>
+    <a href="#">プライバシーポリシー</a>
+    <a href="mailto:your@email.com">お問い合わせ</a>
+  </p>
+  <p>© 2025 札幌市体育館予約. All rights reserved.</p>
+</footer>
+
+</body>
+</html>
