@@ -17,9 +17,11 @@ fi
 
 # 依存パッケージのインストール
 echo "[Info] 依存パッケージを確認中..."
-pip3 install -r requirements.txt -q
-if [ $? -ne 0 ]; then
-    echo "[Error] パッケージのインストールに失敗しました。"
+pip3 install -r requirements.txt -q --ignore-installed --break-system-packages 2>/dev/null \
+  || pip3 install -r requirements.txt -q --ignore-installed 2>/dev/null \
+  || pip3 install -r requirements.txt -q
+if ! python3 -c "import flask, selenium, jpholiday" 2>/dev/null; then
+    echo "[Error] 必要なパッケージが不足しています。"
     exit 1
 fi
 
