@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=札幌体育館 自動予約ツール
+Comment=札幌市体育館自動予約ツールを起動します
+Exec=bash -c "cd /home/user/-/yoyaku/tool && bash start.sh; exec bash"
+Icon=applications-internet
+Terminal=true
+Categories=Utility;
