@@ -144,8 +144,22 @@ class ReserveWorker:
             "Chrome/131.0.0.0 Safari/537.36"
         )
 
+        # Chrome/ChromeDriverのパスを固定（Linux環境用）
+        _CHROME_BIN = "/opt/chrome-145/chrome"
+        _CHROMEDRIVER_BIN = "/opt/chrome-145/chromedriver"
+        import os as _os
+        if _os.path.exists(_CHROME_BIN):
+            options.binary_location = _CHROME_BIN
+            service = ChromeService(_CHROMEDRIVER_BIN)
+        else:
+            service = ChromeService(ChromeDriverManager().install())
+
+        # ヘッドレスモード（GUIなし環境用）
+        if not _os.environ.get("DISPLAY"):
+            options.add_argument("--headless=new")
+
         driver = webdriver.Chrome(
-            service=ChromeService(ChromeDriverManager().install()),
+            service=service,
             options=options
         )
 
