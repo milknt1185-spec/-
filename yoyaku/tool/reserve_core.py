@@ -297,7 +297,34 @@ class ReserveWorker:
             lines.append(f"・{name}\n  {url}")
         return lines
 
-    # ---------- ポップアップスキップ ----------
+    def is_purpose_available(self, purpose_keyword: str) -> bool:
+        """指定された利用目的（バレーボール等）がドロップダウンに存在するか確認"""
+        try:
+            text_inputs = self.driver.find_elements(By.XPATH, "//input[@type='text']")
+            if not text_inputs:
+                return False
+
+            purpose_input = text_inputs[0]
+            self.driver.execute_script("arguments[0].click();", purpose_input)
+            time.sleep(0.3)
+
+            # ドロップダウン内に該当の利用目的が存在するかチェック
+            purpose_item = self.driver.find_elements(
+                By.XPATH,
+                f"//div[contains(@class,'v-menu__content')]"
+                f"//div[contains(@class,'v-list-item--link') and contains(.,'{purpose_keyword}')]"
+            )
+
+            # ドロップダウンを閉じる
+            self.driver.execute_script("arguments[0].click();", purpose_input)
+            time.sleep(0.2)
+
+            return len(purpose_item) > 0
+        except Exception as e:
+            self.log(f"[Warn] 利用目的確認エラー: {str(e).splitlines()[0]}")
+            return False
+
+    # ---------- 施設フィルタリング ----------
 
     def skip_popup_if_exists(self) -> bool:
         """
@@ -685,6 +712,14 @@ class ReserveWorker:
 
             # ★STEP2: 時間帯自動選択（日付クリック後に出現したボタン）
             if not self.click_time_slot(monitor_url, time_slots):
+                return False
+
+            # ★STEP2.5: バレーボール利用可能確認
+            purpose_keyword = self.config.get("purpose", "バレーボール")
+            time.sleep(0.5)  # ページ読み込み完全待機
+            if not self.is_purpose_available(purpose_keyword):
+                self.log(f"[Info] {school_name} では「{purpose_keyword}」が利用できません → スキップ")
+                self.driver.get(monitor_url)
                 return False
 
             # ★STEP3: 確認→申込→人数→支払方法
