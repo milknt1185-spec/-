@@ -297,34 +297,7 @@ class ReserveWorker:
             lines.append(f"・{name}\n  {url}")
         return lines
 
-    def is_purpose_available(self, purpose_keyword: str) -> bool:
-        """指定された利用目的（バレーボール等）がドロップダウンに存在するか確認"""
-        try:
-            text_inputs = self.driver.find_elements(By.XPATH, "//input[@type='text']")
-            if not text_inputs:
-                return False
-
-            purpose_input = text_inputs[0]
-            self.driver.execute_script("arguments[0].click();", purpose_input)
-            time.sleep(0.3)
-
-            # ドロップダウン内に該当の利用目的が存在するかチェック
-            purpose_item = self.driver.find_elements(
-                By.XPATH,
-                f"//div[contains(@class,'v-menu__content')]"
-                f"//div[contains(@class,'v-list-item--link') and contains(.,'{purpose_keyword}')]"
-            )
-
-            # ドロップダウンを閉じる
-            self.driver.execute_script("arguments[0].click();", purpose_input)
-            time.sleep(0.2)
-
-            return len(purpose_item) > 0
-        except Exception as e:
-            self.log(f"[Warn] 利用目的確認エラー: {str(e).splitlines()[0]}")
-            return False
-
-    # ---------- 施設フィルタリング ----------
+    # ---------- ポップアップスキップ ----------
 
     def skip_popup_if_exists(self) -> bool:
         """
@@ -432,7 +405,7 @@ class ReserveWorker:
 
     # ---------- 予約処理 ----------
 
-    def reserve_from_current_detail(self, monitor_url: str) -> bool:
+    def reserve_from_current_detail(self, monitor_url: str, school_name: str = "") -> bool:
         try:
             # ---- 確認ボタン（時間帯選択後） ----
             # ★高速化: 3秒タイムアウト
@@ -474,8 +447,10 @@ class ReserveWorker:
             self.log(f"[Info] type=text input数: {len(text_inputs)}")
 
             # ---- 利用目的: 1番目のtype=text をクリックしてドロップダウンを開く ----
+            # ★ここで purpose_keyword が選択肢に無い施設は予約対象外として除外する
             if text_inputs:
                 purpose_input = text_inputs[0]
+                purpose_missing = False
                 try:
                     self.driver.execute_script("arguments[0].scrollIntoView(true);", purpose_input)
                     self.driver.execute_script("arguments[0].click();", purpose_input)
@@ -484,18 +459,32 @@ class ReserveWorker:
 
                     # v-menu__content 内（表示中のドロップダウン）の v-list-item--link だけを対象にする
                     # これによりナビメニューの v-list-item と混同しない
-                    purpose_item = WebDriverWait(self.driver, 3).until(
-                        EC.element_to_be_clickable(
-                            (By.XPATH,
-                             f"//div[contains(@class,'v-menu__content')]"
-                             f"//div[contains(@class,'v-list-item--link') and contains(.,'{purpose_keyword}')]")
-                        )
+                    menu_xpath = (
+                        f"//div[contains(@class,'v-menu__content')]"
+                        f"//div[contains(@class,'v-list-item--link') and contains(.,'{purpose_keyword}')]"
                     )
-                    self.driver.execute_script("arguments[0].scrollIntoView(true);", purpose_item)
-                    self.driver.execute_script("arguments[0].click();", purpose_item)
-                    self.log(f"[OK] 利用目的選択: {purpose_item.text!r}")
+                    try:
+                        purpose_item = WebDriverWait(self.driver, 3).until(
+                            EC.element_to_be_clickable((By.XPATH, menu_xpath))
+                        )
+                    except Exception:
+                        # 選択肢に無い → この施設では該当種目を予約できないので除外
+                        purpose_missing = True
+
+                    if not purpose_missing:
+                        self.driver.execute_script("arguments[0].scrollIntoView(true);", purpose_item)
+                        self.driver.execute_script("arguments[0].click();", purpose_item)
+                        self.log(f"[OK] 利用目的選択: {purpose_item.text!r}")
                 except Exception as e:
                     self.log(f"[Warn] 利用目的ドロップダウン選択失敗: {str(e).splitlines()[0]}")
+
+                if purpose_missing:
+                    label = school_name or "この施設"
+                    self.log(
+                        f"[Skip] {label} は「{purpose_keyword}」を選べません → 対象外として次の施設へ"
+                    )
+                    self.driver.get(monitor_url)
+                    return False
 
             # ---- 利用人数: JavaScriptで確実に2番目のtype=textを特定して入力 ----
             try:
@@ -714,16 +703,9 @@ class ReserveWorker:
             if not self.click_time_slot(monitor_url, time_slots):
                 return False
 
-            # ★STEP2.5: バレーボール利用可能確認
-            purpose_keyword = self.config.get("purpose", "バレーボール")
-            time.sleep(0.5)  # ページ読み込み完全待機
-            if not self.is_purpose_available(purpose_keyword):
-                self.log(f"[Info] {school_name} では「{purpose_keyword}」が利用できません → スキップ")
-                self.driver.get(monitor_url)
-                return False
-
             # ★STEP3: 確認→申込→人数→支払方法
-            return self.reserve_from_current_detail(monitor_url)
+            #   （内容入力ページで利用目的が選べない施設はここで除外される）
+            return self.reserve_from_current_detail(monitor_url, school_name)
 
         except Exception as e:
             self.log(f"[Error] 予約処理エラー ({school_name}): {str(e).splitlines()[0]}")
