@@ -6,8 +6,6 @@
 """
 
 import os
-import hmac
-import time
 import queue
 import threading
 import datetime
@@ -71,56 +69,6 @@ def login_page():
     return render_template("login.html")
 
 
-# ==========================
-# ログイン試行回数の制限（総当たり対策）
-# ngrok等で外部公開する際、PINだけが防御になるため必須。
-# プロセス内メモリで管理（再起動でリセット）。
-# ==========================
-
-_MAX_ATTEMPTS = 5          # この回数連続で失敗したらロック
-_LOCK_SECONDS = 300        # ロック時間（秒）
-_login_attempts = {}       # {ip: [失敗回数, ロック解除時刻]}
-_attempts_lock = threading.Lock()
-
-
-def _client_ip() -> str:
-    # ngrok/リバースプロキシ経由では X-Forwarded-For に実IPが入る
-    fwd = request.headers.get("X-Forwarded-For", "")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.remote_addr or "unknown"
-
-
-def _check_locked(ip: str):
-    """ロック中なら残り秒数を返す。ロックされていなければ None。"""
-    with _attempts_lock:
-        entry = _login_attempts.get(ip)
-        if not entry:
-            return None
-        count, until = entry
-        remain = until - time.time()
-        if remain > 0:
-            return int(remain)
-        if count >= _MAX_ATTEMPTS:
-            # ロック期限切れ → カウンタをリセット
-            _login_attempts.pop(ip, None)
-        return None
-
-
-def _record_failure(ip: str):
-    with _attempts_lock:
-        count, _ = _login_attempts.get(ip, (0, 0.0))
-        count += 1
-        until = time.time() + _LOCK_SECONDS if count >= _MAX_ATTEMPTS else 0.0
-        _login_attempts[ip] = (count, until)
-        return count
-
-
-def _clear_failures(ip: str):
-    with _attempts_lock:
-        _login_attempts.pop(ip, None)
-
-
 @app.route("/api/login", methods=["POST"])
 def api_login():
     data = request.get_json(force=True) or {}
@@ -130,33 +78,11 @@ def api_login():
         # PIN未設定ならログイン不要
         session["logged_in"] = True
         return jsonify({"ok": True})
-
-    ip = _client_ip()
-    locked = _check_locked(ip)
-    if locked is not None:
-        return jsonify({
-            "ok": False,
-            "error": f"試行回数が多すぎます。{locked // 60 + 1}分後に再試行してください",
-        }), 429
-
-    # 桁数差から情報が漏れないよう定数時間で比較
-    if hmac.compare_digest(pin, correct):
-        _clear_failures(ip)
+    if pin == correct:
         session["logged_in"] = True
         session.permanent = True
         return jsonify({"ok": True})
-
-    count = _record_failure(ip)
-    print(f"[Warn] PIN認証失敗 ({count}回目) from {ip}")
-    if count >= _MAX_ATTEMPTS:
-        return jsonify({
-            "ok": False,
-            "error": f"試行回数が多すぎます。{_LOCK_SECONDS // 60}分間ロックされました",
-        }), 429
-    return jsonify({
-        "ok": False,
-        "error": f"PINが違います（あと{_MAX_ATTEMPTS - count}回で{_LOCK_SECONDS // 60}分間ロック）",
-    }), 401
+    return jsonify({"ok": False, "error": "PINが違います"}), 401
 
 
 @app.route("/api/logout", methods=["POST"])
